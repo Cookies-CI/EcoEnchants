@@ -1,0 +1,50 @@
+name: EcoEnchants
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+    release:
+        types: [created]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up JDK
+              uses: actions/setup-java@v4
+              with:
+                  java-version: "21"
+                  distribution: "adopt"
+
+            - name: Build with Gradle
+              run: |
+                  chmod +x gradlew
+                  ./gradlew build
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Plugin
+                  path: build/libs/*.jar
+
+            - name: Upload to release
+              if: github.event_name == 'release'
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: build/libs/*.jar
+                  
+            - name: Cache Maven packages
+              uses: actions/cache@v2
+              with:
+                  path: ~/.m2
+                  key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+                  
+            - name: Update dependencies
+              uses: renovatebot/renovate@v24
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
